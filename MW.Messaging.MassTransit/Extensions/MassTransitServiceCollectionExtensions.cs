@@ -206,17 +206,39 @@ public static class MassTransitServiceCollectionExtensions
     /// </summary>
     public static IBusRegistrationConfigurator AddEntityFrameworkOutbox<TDbContext>(
         this IBusRegistrationConfigurator configurator,
-        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null)
+        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null,
+        OutboxDatabaseProvider provider = OutboxDatabaseProvider.SqlServer)
         where TDbContext : DbContext
     {
         // Call MassTransit's extension method explicitly to avoid infinite recursion
         EntityFrameworkOutboxConfigurationExtensions.AddEntityFrameworkOutbox<TDbContext>(configurator, o =>
         {
+            ApplyOutboxDatabaseProvider(o, provider);
             o.UseBusOutbox();
             configureOutbox?.Invoke(o);
         });
 
         return configurator;
+    }
+
+    /// <summary>
+    /// Selects the transactional outbox store provider (SQL Server or PostgreSQL) so that
+    /// MassTransit's EF Core outbox has a configured lock/store provider. Without this the
+    /// bus fails to start because MassTransit 8.2.5 cannot resolve the outbox lock provider.
+    /// </summary>
+    internal static void ApplyOutboxDatabaseProvider(
+        IEntityFrameworkOutboxConfigurator configurator,
+        OutboxDatabaseProvider provider)
+    {
+        switch (provider)
+        {
+            case OutboxDatabaseProvider.PostgreSql:
+                configurator.UsePostgres();
+                break;
+            default:
+                configurator.UseSqlServer();
+                break;
+        }
     }
 }
 
@@ -256,11 +278,13 @@ public class MassTransitMessagingOptions
     /// Enables publisher-side outbox by default.
     /// </summary>
     public MassTransitMessagingOptions UseEntityFrameworkOutbox<TDbContext>(
-        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null)
+        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null,
+        OutboxDatabaseProvider provider = OutboxDatabaseProvider.SqlServer)
         where TDbContext : DbContext
     {
         OutboxConfigurator = cfg => EntityFrameworkOutboxConfigurationExtensions.AddEntityFrameworkOutbox<TDbContext>(cfg, o =>
         {
+            MassTransitServiceCollectionExtensions.ApplyOutboxDatabaseProvider(o, provider);
             o.UseBusOutbox();
             configureOutbox?.Invoke(o);
         });
@@ -273,11 +297,13 @@ public class MassTransitMessagingOptions
     /// Both publisher-side and consumer-side outbox are enabled.
     /// </summary>
     public MassTransitMessagingOptions UseEntityFrameworkInboxOutbox<TDbContext>(
-        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null)
+        Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null,
+        OutboxDatabaseProvider provider = OutboxDatabaseProvider.SqlServer)
         where TDbContext : DbContext
     {
         OutboxConfigurator = cfg => EntityFrameworkOutboxConfigurationExtensions.AddEntityFrameworkOutbox<TDbContext>(cfg, o =>
         {
+            MassTransitServiceCollectionExtensions.ApplyOutboxDatabaseProvider(o, provider);
             o.UseBusOutbox();
             o.QueryDelay = TimeSpan.FromSeconds(1);
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(5);

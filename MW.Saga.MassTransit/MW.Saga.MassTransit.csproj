@@ -10,6 +10,7 @@
     <Authors>Dr.MadWill</Authors>
     <PackageIcon>avatar.png</PackageIcon>
     <RepositoryUrl>https://github.com/DrMadWill/MW.Extensions</RepositoryUrl>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,8 +24,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-    <PackageReference Include="MW.Messaging.Abstractions" Version="1.0.0" />
-    <PackageReference Include="MW.Saga.Abstractions" Version="1.0.0" />
+    <PackageReference Include="MW.Messaging.Abstractions" Version="1.0.1" />
+    <PackageReference Include="MW.Saga.Abstractions" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>

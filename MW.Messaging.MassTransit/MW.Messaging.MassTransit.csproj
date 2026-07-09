@@ -10,7 +10,7 @@
     <Authors>Dr.MadWill</Authors>
     <PackageIcon>avatar.png</PackageIcon>
     <RepositoryUrl>https://github.com/DrMadWill/MW.Repositories</RepositoryUrl>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
   </PropertyGroup>
 
   <ItemGroup>

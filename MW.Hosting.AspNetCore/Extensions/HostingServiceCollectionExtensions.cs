@@ -40,6 +40,7 @@ public static class HostingServiceCollectionExtensions
         // Logging services
         services.AddHttpContextAccessor();
         services.AddSingleton<ICurrentUserAccessor, HttpCurrentUserAccessor>();
+        services.AddSingleton<MW.Messaging.Context.IPublishUserContext, MW.Hosting.AspNetCore.Logging.HttpPublishUserContext>();
         services.AddSingleton<IRequestTraceAccessor, HttpRequestTraceAccessor>();
 
         return services;

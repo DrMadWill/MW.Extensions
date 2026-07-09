@@ -10,13 +10,16 @@ public class DefaultPublishContextProvider : IPublishContextProvider
 {
     private readonly ICorrelationContext? _correlationContext;
     private readonly IServiceIdentityProvider? _serviceIdentityProvider;
+    private readonly IPublishUserContext? _userContext;
 
     public DefaultPublishContextProvider(
         ICorrelationContext? correlationContext = null,
-        IServiceIdentityProvider? serviceIdentityProvider = null)
+        IServiceIdentityProvider? serviceIdentityProvider = null,
+        IPublishUserContext? userContext = null)
     {
         _correlationContext = correlationContext;
         _serviceIdentityProvider = serviceIdentityProvider;
+        _userContext = userContext;
     }
 
     public PublishContextModel Create()
@@ -25,7 +28,9 @@ public class DefaultPublishContextProvider : IPublishContextProvider
         {
             CorrelationId = _correlationContext?.CorrelationId ?? Guid.NewGuid().ToString(),
             CausationId = _correlationContext?.CausationId,
-            TraceId = _correlationContext?.TraceId ?? Activity.Current?.TraceId.ToString()
+            TraceId = _correlationContext?.TraceId ?? Activity.Current?.TraceId.ToString(),
+            UserId = _userContext?.UserId,
+            TenantId = _userContext?.TenantId
         };
 
         if (_serviceIdentityProvider != null)

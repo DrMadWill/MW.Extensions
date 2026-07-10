@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW.Core", "MW.Core\MW.Core.csproj", "{524FD6F1-D1B6-4CFD-A636-781678557E51}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW.Application.Abstractions", "MW.Application.Abstractions\MW.Application.Abstractions.csproj", "{D579BCBB-9E40-42AB-ACBF-7D36FA2C4EB2}"
@@ -53,6 +54,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW.OrderRegistration.ApiDemo", "samples\MW.OrderRegistration.ApiDemo\MW.OrderRegistration.ApiDemo.csproj", "{4DE25D31-EAE3-421D-8D70-9E10486EDD03}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW.Hosting.AspNetCore", "MW.Hosting.AspNetCore\MW.Hosting.AspNetCore.csproj", "{07F44368-1978-4E60-82D8-B98A6FA44D09}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MW.Identity.Sso", "MW.Identity.Sso\MW.Identity.Sso.csproj", "{7E248EB0-44D8-436E-AE73-ACC513557942}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -304,6 +307,18 @@ Global
 		{07F44368-1978-4E60-82D8-B98A6FA44D09}.Release|x64.Build.0 = Release|Any CPU
 		{07F44368-1978-4E60-82D8-B98A6FA44D09}.Release|x86.ActiveCfg = Release|Any CPU
 		{07F44368-1978-4E60-82D8-B98A6FA44D09}.Release|x86.Build.0 = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|x64.Build.0 = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Debug|x86.Build.0 = Debug|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|x64.ActiveCfg = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|x64.Build.0 = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|x86.ActiveCfg = Release|Any CPU
+		{7E248EB0-44D8-436E-AE73-ACC513557942}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

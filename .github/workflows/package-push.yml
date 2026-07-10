@@ -21,6 +21,7 @@ jobs:
           - MW.Persistence.Abstractions/MW.Persistence.Abstractions.csproj
           - MW.Persistence.DependencyInjection/MW.Persistence.DependencyInjection.csproj
           - MW.Identity.Token/MW.Identity.Token.csproj
+          - MW.Identity.Sso/MW.Identity.Sso.csproj
           - MW.Messaging.Abstractions/MW.Messaging.Abstractions.csproj
           - MW.Messaging.MassTransit/MW.Messaging.MassTransit.csproj
           - MW.Saga.Abstractions/MW.Saga.Abstractions.csproj

@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>MW.Identity.Sso</RootNamespace>
+    <AssemblyName>MW.Identity.Sso</AssemblyName>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Dr.MadWill</Authors>
+    <RepositoryUrl>https://github.com/DrMadWill/MW.Extensions</RepositoryUrl>
+    <RepositoryType>Extensions</RepositoryType>
+    <Description>MyBid admin SSO relying-party: challenge to Identity /sso/authorize, callback gRPC code exchange, local cookie sign-in.</Description>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.27.2" />
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.65.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.65.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="MW.Identity.Token" Version="1.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\sso_introspection.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+</Project>

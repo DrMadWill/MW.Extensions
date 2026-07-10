@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+// NOTE: package + service + message names MUST match the Identity server proto
+// (identity-service SSO-2 sso_introspection.proto) exactly — gRPC dispatch is by full name.
+// Only csharp_namespace differs. GrpcServices="Client" here (server generates the base).
+option csharp_namespace = "MW.Identity.Sso.Grpc";
+
+package mybid.identity.sso.v1;
+
+service SsoIntrospectionRpc {
+  rpc ExchangeAuthCode (ExchangeAuthCodeRequest) returns (ExchangeAuthCodeReply);
+}
+
+message ExchangeAuthCodeRequest {
+  string code = 1;
+}
+
+message ExchangeAuthCodeReply {
+  string user_id = 1;
+  string access_token = 2;
+  int64  expires_at_unix = 3;
+  repeated ClaimPair claims = 4;
+  repeated string roles = 5;
+  repeated string permissions = 6;
+}
+
+message ClaimPair {
+  string type = 1;
+  string value = 2;
+}

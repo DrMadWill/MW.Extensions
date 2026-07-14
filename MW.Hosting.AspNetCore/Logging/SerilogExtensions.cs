@@ -50,13 +50,35 @@ public static class SerilogExtensions
                 });
             }
 
-            var healthPath = configuration.GetValue<string>("HealthEndpoints:Path") ?? "/api/health";
-            loggerConfig.Filter.ByExcluding(logEvent =>
-                logEvent.Properties.TryGetValue("RequestPath", out var pathValue)
-                && pathValue is ScalarValue { Value: string pathString }
-                && pathString == healthPath);
+            // Suppress health-probe request logs (Consul/k8s/load-balancer traffic) so they
+            // don't flood the logs. Uses the same HealthEndpointOptions as the endpoint mapping,
+            // so Path + Readiness + Liveness are all covered and stay in sync with the endpoints.
+            var healthOptions = new HealthEndpointOptions();
+            configuration.GetSection("HealthEndpoints").Bind(healthOptions);
+
+            if (healthOptions.SuppressRequestLogging)
+            {
+                var healthPaths = healthOptions.AllPaths();
+
+                // "RequestPath" is emitted by Serilog.AspNetCore's UseSerilogRequestLogging and by the
+                // ASP.NET Core hosting log scope; "Path" is emitted by the framework's own
+                // "Request starting/finished" diagnostics. Check both so probe traffic is suppressed
+                // regardless of which pipeline produced the event.
+                loggerConfig.Filter.ByExcluding(logEvent =>
+                    healthPaths.Count > 0
+                    && (IsHealthPathProperty(logEvent, "RequestPath", healthPaths)
+                        || IsHealthPathProperty(logEvent, "Path", healthPaths)));
+            }
         });
 
         return builder;
     }
+
+    internal static bool IsHealthPathProperty(
+        LogEvent logEvent,
+        string propertyName,
+        IReadOnlyList<string> healthPaths)
+        => logEvent.Properties.TryGetValue(propertyName, out var value)
+           && value is ScalarValue { Value: string path }
+           && HealthEndpointOptions.MatchesHealthPath(path, healthPaths);
 }

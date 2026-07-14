@@ -23,12 +23,11 @@ public static class HostingServiceCollectionExtensions
         // Health checks
         services.AddDefaultHealthChecks();
 
-        // Health endpoint options
-        if (configuration.GetSection("HealthEndpoints").Exists())
-        {
-            services.Configure<HealthEndpointOptions>(configuration.GetSection("HealthEndpoints"));
-            services.AddSingleton<IValidateOptions<HealthEndpointOptions>, HealthEndpointOptionsValidator>();
-        }
+        // Health endpoint options — ALWAYS registered so every MyBid service exposes the
+        // same canonical /api/health even without a "HealthEndpoints" section. Binding an
+        // absent section is a no-op and leaves the standardized defaults in place.
+        services.Configure<HealthEndpointOptions>(configuration.GetSection("HealthEndpoints"));
+        services.AddSingleton<IValidateOptions<HealthEndpointOptions>, HealthEndpointOptionsValidator>();
 
         // Consul
         if (configuration.GetSection("Consul").Exists())

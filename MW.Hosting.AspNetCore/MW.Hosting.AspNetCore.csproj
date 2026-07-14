@@ -10,7 +10,8 @@
     <Authors>Dr.MadWill</Authors>
     <PackageIcon>avatar.png</PackageIcon>
     <RepositoryUrl>https://github.com/DrMadWill/MW.Repositories</RepositoryUrl>
-    <Version>1.0.2</Version>
+    <Version>1.0.3</Version>
+    <PackageReleaseNotes>Standardized health endpoints across services and health-probe request-log suppression (Path/Readiness/Liveness aware, query- and slash-insensitive). HealthEndpointOptions now always registered.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

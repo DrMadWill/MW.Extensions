@@ -85,12 +85,34 @@ public static class MyBidSsoEndpointExtensions
     }
 
     /// <summary>
-    /// Signs the user out of the local SSO cookie session. Single-logout propagation to Identity is
-    /// Phase 2; for now a local cookie sign-out is sufficient.
+    /// Signs the user out of the local SSO cookie session (deletes the shared cookie on this host). Pair with
+    /// <see cref="BuildSsoLogoutUrl"/> to redirect to Identity's central logout so the Identity SSO session is
+    /// also cleared and the <c>UserLoggedOut</c> event fires (single logout, Yol A).
     /// </summary>
     public static Task SignOutMyBidSsoAsync(this HttpContext http)
     {
         var options = http.RequestServices.GetRequiredService<MyBidSsoOptions>();
         return http.SignOutAsync(options.SchemeName);
+    }
+
+    /// <summary>
+    /// Builds the URL of Identity's central <c>/sso/logout</c> endpoint, carrying this RP's <c>client_id</c> and
+    /// <c>post_logout_redirect_uri</c> so Identity can validate the target against its allowlist and redirect back.
+    /// Returns <c>"/"</c> when no <see cref="MyBidSsoOptions.LogoutUrl"/> is configured (local sign-out only).
+    /// </summary>
+    public static string BuildSsoLogoutUrl(this HttpContext http)
+    {
+        var options = http.RequestServices.GetRequiredService<MyBidSsoOptions>();
+        if (string.IsNullOrWhiteSpace(options.LogoutUrl))
+        {
+            return "/";
+        }
+
+        var query = new Dictionary<string, string?>
+        {
+            ["client_id"] = options.ClientId,
+            ["post_logout_redirect_uri"] = options.PostLogoutRedirectUri
+        };
+        return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(options.LogoutUrl, query);
     }
 }

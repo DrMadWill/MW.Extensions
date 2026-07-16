@@ -24,11 +24,43 @@ public sealed class MyBidSsoOptions
     /// <summary>Local callback path handled by <c>MapMyBidSsoCallback</c>.</summary>
     public string CallbackPath { get; set; } = "/sso/callback";
 
-    /// <summary>Name of the local auth cookie.</summary>
+    /// <summary>Name of the shared auth cookie. MUST be identical across all RPs for single sign-on/logout.</summary>
     public string CookieName { get; set; } = "MyBid.Sso";
+
+    /// <summary>
+    /// Parent domain for the shared auth cookie (e.g. <c>.mybid.staging</c>). When set, the cookie is
+    /// visible to every RP subdomain (single login without re-redirect; single logout via one delete).
+    /// Empty = host-only cookie (per-RP, no cross-app sharing).
+    /// </summary>
+    public string CookieDomain { get; set; } = string.Empty;
 
     /// <summary>Cookie authentication scheme name registered by <c>AddMyBidSsoRelyingParty</c>.</summary>
     public string SchemeName { get; set; } = "MyBidSso";
+
+    /// <summary>
+    /// Redis connection string for the shared Data Protection key ring. When set, all RPs + Identity that
+    /// share it can decrypt each other's cookie. Empty = local key ring (single-app dev only — cross-app
+    /// cookie decrypt WILL fail, so staging must set this).
+    /// </summary>
+    public string DataProtectionRedisConnection { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Data Protection application name — MUST be identical across all RPs + Identity, otherwise the derived
+    /// key purpose differs and cross-app cookie decrypt fails even with a shared key ring.
+    /// </summary>
+    public string DataProtectionApplicationName { get; set; } = "MyBid.Sso";
+
+    /// <summary>
+    /// Identity's central <c>/sso/logout</c> absolute URL. The RP "Çıxış" action redirects here so the shared
+    /// cookie + Identity SSO session are cleared centrally (single logout). Empty = local sign-out only.
+    /// </summary>
+    public string LogoutUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Where Identity redirects the browser after central logout (must be on Identity's post-logout allowlist,
+    /// i.e. same origin as this RP's <see cref="RedirectUri"/>).
+    /// </summary>
+    public string PostLogoutRedirectUri { get; set; } = string.Empty;
 
     internal void Validate()
     {

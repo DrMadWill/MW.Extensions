@@ -162,6 +162,17 @@ public static class MassTransitServiceCollectionExtensions
                 cfg.ConnectBusObserver(new BusLifecycleObserver(
                     context.GetRequiredService<Microsoft.Extensions.Logging.ILogger<BusLifecycleObserver>>()));
 
+                // Consumer-side outbox: apply the EF outbox consume filter to every receive
+                // endpoint (set by UseEntityFrameworkInboxOutbox). Without it, publishes from
+                // inside a consumer bypass the outbox via the ConsumeContext and race the
+                // consumer's own database transaction. Must be connected BEFORE ConfigureEndpoints.
+                if (options.ConsumerOutboxEndpointConfigurator is not null)
+                {
+                    cfg.ConnectEndpointConfigurationObserver(
+                        new Outbox.ConsumerOutboxEndpointConfigurationObserver(
+                            context, options.ConsumerOutboxEndpointConfigurator));
+                }
+
                 // Custom RabbitMQ bus configuration hook
                 options.ConfigureRabbitMqBusAction?.Invoke(context, cfg);
 
@@ -253,6 +264,14 @@ public class MassTransitMessagingOptions
     public Action<IBusRegistrationContext, IRabbitMqBusFactoryConfigurator>? ConfigureRabbitMqBusAction { get; set; }
     public Action<IBusRegistrationConfigurator>? OutboxConfigurator { get; set; }
 
+    /// <summary>
+    /// When set (by <see cref="UseEntityFrameworkInboxOutbox{TDbContext}"/>), applied to every
+    /// receive endpoint via an endpoint configuration observer so the consumer-side outbox
+    /// (inbox de-duplication + transactional publish buffering) is actually active. The bus
+    /// outbox alone does NOT cover publishes made from inside a consumer scope.
+    /// </summary>
+    public Action<IBusRegistrationContext, IReceiveEndpointConfigurator>? ConsumerOutboxEndpointConfigurator { get; set; }
+
     public MassTransitMessagingOptions AddConsumersFromAssembly(Assembly assembly)
     {
         ConsumerAssemblies.Add(assembly);
@@ -294,7 +313,14 @@ public class MassTransitMessagingOptions
     /// <summary>
     /// Configures consumer-side outbox (InboxState) with Entity Framework Core.
     /// This enables idempotent message delivery on the consumer side.
-    /// Both publisher-side and consumer-side outbox are enabled.
+    /// Both publisher-side and consumer-side outbox are enabled: in addition to the bus outbox,
+    /// an endpoint configuration observer applies <c>UseEntityFrameworkOutbox</c> to EVERY receive
+    /// endpoint, so publishes made from inside a consumer are stored transactionally with the
+    /// consumer's DbContext changes and delivered only after the transaction commits.
+    /// (Before 1.0.5 this method configured the bus outbox only — consumer publishes silently
+    /// bypassed the outbox via the ConsumeContext and raced the database commit.)
+    /// Requires the DbContext model to include AddInboxStateEntity/AddOutboxMessageEntity/
+    /// AddOutboxStateEntity and the corresponding tables to exist.
     /// </summary>
     public MassTransitMessagingOptions UseEntityFrameworkInboxOutbox<TDbContext>(
         Action<IEntityFrameworkOutboxConfigurator>? configureOutbox = null,
@@ -309,6 +335,8 @@ public class MassTransitMessagingOptions
             o.DuplicateDetectionWindow = TimeSpan.FromMinutes(5);
             configureOutbox?.Invoke(o);
         });
+        ConsumerOutboxEndpointConfigurator = (context, endpoint) =>
+            endpoint.UseEntityFrameworkOutbox<TDbContext>(context);
         return this;
     }
 }

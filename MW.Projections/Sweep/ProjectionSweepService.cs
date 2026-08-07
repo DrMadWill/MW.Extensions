@@ -25,6 +25,18 @@ public sealed class ProjectionSweepService<TKey> : BackgroundService
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ProjectionSweepService<TKey>> _logger;
 
+    /// <summary>
+    /// Cursor left off by the previous run, persisted across <see cref="RunOnceAsync"/> calls on
+    /// this singleton-lifetime instance. Safe as plain instance state (no synchronization) because
+    /// <see cref="ExecuteAsync"/> always fully awaits one run before starting the next — there is
+    /// never a concurrent <see cref="RunOnceAsync"/> call against the same instance. Reset to
+    /// <see langword="default"/> once a run reaches the end of the keyspace (an empty or
+    /// short/partial final page), so the sweep wraps around and starts over; otherwise carried
+    /// forward so a keyspace larger than <c>MaxBatchesPerRun * BatchSize</c> is fully covered over
+    /// multiple runs instead of the same first slice being reprocessed forever.
+    /// </summary>
+    private TKey? _cursor;
+
     public ProjectionSweepService(
         IServiceScopeFactory scopeFactory,
         IOptions<ProjectionSweepOptions> options,
@@ -71,11 +83,13 @@ public sealed class ProjectionSweepService<TKey> : BackgroundService
 
     /// <summary>
     /// Runs one sweep to completion (or until <see cref="ProjectionSweepOptions.MaxBatchesPerRun"/>
-    /// is hit): pages via <see cref="IProjectionSweepSource{TKey}"/>, reconciling each key under
-    /// ONE fixed <c>observedAtUtc</c> (see <see cref="ProjectionSweepClock"/>). A single key's
-    /// reconcile failure is logged and does not abort the rest of the run. Returns the number of
-    /// batches processed — <c>internal</c> so tests can drive a run deterministically without
-    /// going through <see cref="PeriodicTimer"/>.
+    /// is hit): resumes from the cursor <see cref="_cursor"/> the previous run left off at, pages
+    /// via <see cref="IProjectionSweepSource{TKey}"/>, reconciling each key under ONE fixed
+    /// <c>observedAtUtc</c> (see <see cref="ProjectionSweepClock"/>). A single key's reconcile
+    /// failure is logged and does not abort the rest of the run; a genuine cancellation of
+    /// <paramref name="cancellationToken"/> propagates immediately instead (see the inner
+    /// <c>catch</c> below). Returns the number of batches processed — <c>internal</c> so tests can
+    /// drive a run deterministically without going through <see cref="PeriodicTimer"/>.
     /// </summary>
     internal async Task<int> RunOnceAsync(CancellationToken cancellationToken)
     {
@@ -88,38 +102,73 @@ public sealed class ProjectionSweepService<TKey> : BackgroundService
         var source = scope.ServiceProvider.GetRequiredService<IProjectionSweepSource<TKey>>();
         var reconciler = scope.ServiceProvider.GetRequiredService<IProjectionReconciler<TKey>>();
 
-        TKey? cursor = default;
+        var cursor = _cursor;
         var batchesProcessed = 0;
+        var reachedEndOfKeyspace = false;
 
-        while (batchesProcessed < options.MaxBatchesPerRun)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var batch = await source.GetNextBatchAsync(options.BatchSize, cursor, cancellationToken)
-                .ConfigureAwait(false);
-            batchesProcessed++;
-
-            if (batch.Count == 0)
-                break;
-
-            foreach (var key in batch)
+            while (batchesProcessed < options.MaxBatchesPerRun)
             {
-                try
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var batch = await source.GetNextBatchAsync(options.BatchSize, cursor, cancellationToken)
+                    .ConfigureAwait(false);
+                batchesProcessed++;
+
+                if (batch.Count == 0)
                 {
-                    var outcome = await reconciler.ReconcileAsync(key, cancellationToken).ConfigureAwait(false);
-                    _logger.LogDebug("Projection sweep reconciled {Key}: {Outcome}.", key, outcome);
+                    reachedEndOfKeyspace = true;
+                    break;
                 }
-                catch (Exception ex)
+
+                foreach (var key in batch)
                 {
-                    _logger.LogError(
-                        ex, "Projection sweep failed to reconcile {Key}; continuing with the next key.", key);
+                    try
+                    {
+                        var outcome = await reconciler.ReconcileAsync(key, cancellationToken).ConfigureAwait(false);
+                        _logger.LogDebug("Projection sweep reconciled {Key}: {Outcome}.", key, outcome);
+                    }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        // A genuine cancellation of THIS run's token (graceful shutdown) must stop
+                        // promptly, not be treated as an ordinary per-key reconcile failure — the
+                        // outer while-loop's own ThrowIfCancellationRequested only re-checks at the
+                        // START of the next batch, so without this the remaining keys in the
+                        // CURRENT batch would still be churned through and logged as fake errors.
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(
+                            ex, "Projection sweep failed to reconcile {Key}; continuing with the next key.", key);
+                    }
+                }
+
+                cursor = batch[^1];
+
+                if (batch.Count < options.BatchSize)
+                {
+                    reachedEndOfKeyspace = true;
+                    break;
                 }
             }
 
-            cursor = batch[^1];
-
-            if (batch.Count < options.BatchSize)
-                break;
+            if (!reachedEndOfKeyspace && batchesProcessed >= options.MaxBatchesPerRun)
+            {
+                _logger.LogWarning(
+                    "Projection sweep for {KeyType} hit MaxBatchesPerRun={MaxBatchesPerRun} without reaching " +
+                    "the end of the keyspace; resuming from cursor {Cursor} on the next run.",
+                    typeof(TKey).Name, options.MaxBatchesPerRun, cursor);
+            }
+        }
+        finally
+        {
+            // Persist progress even when this run ended via a propagating cancellation: whatever
+            // batches fully completed before the cancellation still advanced the cursor, so the
+            // next run resumes from there instead of re-walking from the very start. Only wrap
+            // around to the beginning of the keyspace on a genuine end-of-keyspace signal.
+            _cursor = reachedEndOfKeyspace ? default : cursor;
         }
 
         return batchesProcessed;

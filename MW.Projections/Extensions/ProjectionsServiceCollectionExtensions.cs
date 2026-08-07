@@ -1,5 +1,7 @@
 using MW.Projections.Options;
+using MW.Projections.Reconcile;
 using MW.Projections.Repair;
+using MW.Projections.Sweep;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -65,6 +67,42 @@ public static class ProjectionsServiceCollectionExtensions
         }
 
         services.TryAddScoped<IProjectionRepairRequester, ProjectionRepairRequester>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the sweep hosted service for <typeparamref name="TKey"/>: a periodic background
+    /// pass over <typeparamref name="TSource"/> (an <see cref="IProjectionSweepSource{TKey}"/>)
+    /// that reconciles every key via <typeparamref name="TReconciler"/> (an
+    /// <see cref="IProjectionReconciler{TKey}"/>). Both are registered scoped and resolved from a
+    /// fresh scope once per run — see <see cref="ProjectionSweepService{TKey}"/> for why.
+    /// <para>
+    /// Disabled by default (<see cref="ProjectionSweepOptions.Enabled"/> = <see langword="false"/>);
+    /// the consuming service must opt in explicitly via <paramref name="configure"/> on exactly ONE
+    /// host if the sweep must not run twice (e.g. an API host and a WebUI host sharing the same
+    /// package reference — see Task 9).
+    /// </para>
+    /// </summary>
+    public static IServiceCollection AddProjectionSweep<TKey, TSource, TReconciler>(
+        this IServiceCollection services,
+        Action<ProjectionSweepOptions>? configure = null)
+        where TSource : class, IProjectionSweepSource<TKey>
+        where TReconciler : class, IProjectionReconciler<TKey>
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddSingleton(TimeProvider.System);
+
+        services.AddOptions<ProjectionSweepOptions>();
+        if (configure is not null)
+        {
+            services.Configure(configure);
+        }
+
+        services.TryAddScoped<IProjectionSweepSource<TKey>, TSource>();
+        services.TryAddScoped<IProjectionReconciler<TKey>, TReconciler>();
+        services.AddHostedService<ProjectionSweepService<TKey>>();
 
         return services;
     }

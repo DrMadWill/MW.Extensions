@@ -47,5 +47,11 @@ internal sealed class ProjectionRepairDedupCache
         return suppress;
     }
 
-    private static string BuildKey(string referenceType, string referenceId) => $"{referenceType}{referenceId}";
+    /// <summary>
+    /// The separator is load-bearing: concatenating the two values directly would make
+    /// <c>("a", "bc")</c> and <c>("ab", "c")</c> collide on the same key, silently suppressing an
+    /// unrelated repair request. A newline cannot occur inside a reference type or id.
+    /// </summary>
+    private static string BuildKey(string referenceType, string referenceId) =>
+        string.Concat(referenceType, "\n", referenceId);
 }

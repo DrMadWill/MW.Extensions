@@ -27,6 +27,7 @@ jobs:
           - MW.Saga.Abstractions/MW.Saga.Abstractions.csproj
           - MW.Saga.MassTransit/MW.Saga.MassTransit.csproj
           - MW.Hosting.AspNetCore/MW.Hosting.AspNetCore.csproj
+          - MW.Projections/MW.Projections.csproj
 
     steps:
       - name: Checkout code
